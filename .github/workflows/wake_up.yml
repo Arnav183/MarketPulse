@@ -1,0 +1,52 @@
+name: Wake up Streamlit Apps
+
+on:
+  schedule:
+    # Runs every 8 hours (at 00:00, 08:00, 16:00 UTC)
+    - cron: '0 */8 * * *'
+  workflow_dispatch: # Allows you to run it manually to test immediately
+
+jobs:
+  wake_up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Selenium
+        run: |
+          pip install selenium webdriver-manager
+
+      - name: Run Headless Browser to Visit Apps
+        run: |
+          python -c "
+          from selenium import webdriver
+          from selenium.webdriver.chrome.options import Options
+          from selenium.webdriver.chrome.service import Service
+          from webdriver_manager.chrome import ChromeDriverManager
+          import time
+
+          options = Options()
+          options.add_argument('--headless')
+          options.add_argument('--no-sandbox')
+          options.add_argument('--disable-dev-shm-usage')
+
+          driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+          # Your specific apps
+          apps = [
+              'https://auto-audit-pro-ywxnxtrpyrijhn2b2uupqz.streamlit.app/', 
+              'https://marketpulse-3ovblv4wwsmuvdyfcpidix.streamlit.app/'
+          ]
+
+          for url in apps:
+              print(f'Visiting {url}...')
+              driver.get(url)
+              # Wait 15 seconds to ensure Streamlit registers the 'user'
+              time.sleep(15) 
+              print(f'Done visiting {url}. Page title: {driver.title}')
+          
+          driver.quit()
+          "
