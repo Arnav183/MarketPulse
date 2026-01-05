@@ -35,7 +35,7 @@ jobs:
 
           driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-          # Your specific apps
+          # specific apps
           apps = [
               'https://auto-audit-pro-ywxnxtrpyrijhn2b2uupqz.streamlit.app/', 
               'https://marketpulse-3ovblv4wwsmuvdyfcpidix.streamlit.app/'
