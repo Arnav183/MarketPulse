@@ -331,3 +331,4 @@ if not hist.empty:
 
 else:
     st.error("Ticker not found.")
+
