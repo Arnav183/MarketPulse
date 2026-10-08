@@ -6,47 +6,73 @@ on:
     - cron: '0 */8 * * *'
   workflow_dispatch: # Allows you to run it manually to test immediately
 
+permissions:
+  contents: write # needed for the keepalive commit below
+
 jobs:
   wake_up:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.12'
 
       - name: Install Selenium
-        run: |
-          pip install selenium webdriver-manager
+        run: pip install selenium
 
       - name: Run Headless Browser to Visit Apps
         run: |
           python -c "
           from selenium import webdriver
           from selenium.webdriver.chrome.options import Options
-          from selenium.webdriver.chrome.service import Service
-          from webdriver_manager.chrome import ChromeDriverManager
+          from selenium.webdriver.common.by import By
           import time
 
           options = Options()
-          options.add_argument('--headless')
+          options.add_argument('--headless=new')
           options.add_argument('--no-sandbox')
           options.add_argument('--disable-dev-shm-usage')
 
-          driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+          # Selenium finds Chrome and its driver on its own
+          driver = webdriver.Chrome(options=options)
 
-          # specific apps
           apps = [
-              'https://auto-audit-pro-ywxnxtrpyrijhn2b2uupqz.streamlit.app/', 
+              'https://auto-audit-pro-ywxnxtrpyrijhn2b2uupqz.streamlit.app/',
               'https://marketpulse-3ovblv4wwsmuvdyfcpidix.streamlit.app/'
           ]
 
           for url in apps:
               print(f'Visiting {url}...')
               driver.get(url)
-              # Wait 15 seconds to ensure Streamlit registers the 'user'
-              time.sleep(15) 
+              time.sleep(10)
+              # If the app is asleep, click the wake button
+              buttons = driver.find_elements(By.XPATH, '//button[contains(., \"get this app back up\")]')
+              if buttons:
+                  print('App was asleep. Clicking wake button...')
+                  buttons[0].click()
+                  time.sleep(30)
+              else:
+                  time.sleep(5)
               print(f'Done visiting {url}. Page title: {driver.title}')
-          
+
           driver.quit()
           "
+
+      # GitHub turns off scheduled workflows in public repos after 60 days
+      # with no commits. This makes an empty commit once every 45 days so
+      # that never happens.
+      - name: Keep workflow from being disabled
+        run: |
+          last=$(git log -1 --format=%ct)
+          days=$(( ($(date +%s) - last) / 86400 ))
+          echo "Days since last commit: $days"
+          if [ "$days" -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Keepalive: prevent scheduled workflow from being disabled"
+            git push
+          fi
